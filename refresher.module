@@ -1,0 +1,347 @@
+<?php
+
+/**
+ * @file
+ * Outlines how a module can use the Batch API.
+ */
+
+/**
+ * @defgroup Refresher
+ * @ingroup EVP
+ * @{
+ * Batch importer builder for facebook\'s social graph query string to current timestamp (since date).
+ *
+ * The @link refresher.install .install file @endlink also shows how the
+ * Batch API can be used to handle long-running hook_update_N() functions.
+ *
+ * @see batch
+ */
+
+function refresher_permission() {
+  $perms = array(
+    'update socialgraph query' => array(
+      'title' => t('update socialgraph query'),
+    ),
+  );
+  return $perms;
+}
+
+/**
+ * Implements hook_menu().
+ */
+function refresher_menu() {
+	$items['refresher'] = array(
+    'title' => 'Batch update socialgraph queries',
+	  'description' => t('Refreshes feeds'),
+	  'page callback' => 'drupal_get_form',
+    'page arguments' => array('refresher_simple_form'),
+  	'access arguments' => array('update socialgraph query'),
+  	'type' => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+
+
+/**
+ * Form builder function to allow choice of which batch to run.
+ */
+function refresher_simple_form() {
+  $form['description'] = array(
+    '#type' => 'markup',
+    '#markup' => t('This example offers two different batches. The first does 1000 identical operations, each completed in on run; the second does 20 operations, but each takes more than one run to operate if there are more than 5 nodes.'),
+  );
+  $form['batch'] = array(
+    '#type' => 'select',
+    '#title' => 'Choose batch',
+    '#options' => array(
+      'batch_1' => t('Batch importer for facebook\'s social graph (since)'),
+      'batch_2' => t('Batch Lastfm.'),
+      'batch_3' => t('Metric query.'),
+    ),
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => 'Go import feed items',
+  );
+
+  return $form;
+}
+
+function refresher_simple_form_submit($form, &$form_state) {
+
+	if ($form_state['values']['batch']=='batch_1') {
+  	$provider = 'facebook_feed';
+  	variable_set('facebook_feed', $provider);
+
+  	//dsm(variable_get('provider'));
+  }
+
+  if ($form_state['values']['batch']=='batch_2') {
+  	$provider = 'lastfm';
+  	variable_set('lastfm', $provider);
+
+  	//dsm(variable_get('provider'));
+  }
+
+// If no nodes, prevent submission.
+  // Find out if we have a node to work with. Otherwise it won't work.
+  $nid = refresher_get_nids($provider);
+  if (empty($nid)) {
+    drupal_set_message(t("You don't currently have any nodes, and this example requires a node to work with. As a result, this form is disabled."));
+    $form['submit']['#disabled'] = TRUE;
+    exit();
+  }
+
+	$function = 'refresher_' . $form_state['values']['batch'];
+
+  $_SESSION['http_request_count'] = 0; // reset counter for debug information.
+
+  // Execute the function named refresher_1 or refresher_2.
+  $batch = $function();
+  batch_set($batch);
+}
+
+
+/**
+ * Batch 1 definition: Goes through all the node ids and .
+ * This creates an operations array defining what batch 1 should do, including
+ * what it should do when it's finished. In this case, each operation is the
+ * same and by chance even has the same $nid to operate on, but we could have
+ * a mix of different types of operations in the operations array.
+ */
+function refresher_batch_1() {
+
+  $nodeids = refresher_get_nids('facebook_feed');
+
+  $num_operations = count($nodeids);
+  drupal_set_message(t('Creating an array of @num operations', array('@num' => $num_operations)));
+
+  $operations = array();
+  // Set up an operations array with all the nids elements, each doing function refresher_op_1.
+  // Each operation in the operations array means at least one new HTTP request, running Drupal from scratch to accomplish the operation. If the operation
+  // returns with $context['finished'] != TRUE, then it will be called again. In this example, $context['finished'] is always TRUE.
+
+  $i = 1; // nao sei o que este parametro array da fun��o abaixo faz (na lina 111) set to 1 just not to give error
+
+  	foreach ($nodeids as $nid) {
+  		//dsm($nid);
+    $operations[] = array('refresher_op_1', array($nid, t('(Operation @operation)', array('@operation' => $i))));
+  	}
+
+
+  //}
+  $batch = array(
+    'operations' => $operations,
+    'finished' => 'refresher_finished',
+  );
+  return $batch;
+}
+
+function refresher_batch_2() {
+
+  $nodeids = refresher_get_nids(variable_get('provider'));
+
+  $num_operations = count($nodeids);
+  drupal_set_message(t('Creating an array of @num operations', array('@num' => $num_operations)));
+
+  $operations = array();
+  // Set up an operations array with all the nids elements, each doing function refresher_op_1.
+  // Each operation in the operations array means at least one new HTTP request, running Drupal from scratch to accomplish the operation. If the operation
+  // returns with $context['finished'] != TRUE, then it will be called again. In this example, $context['finished'] is always TRUE.
+
+  $i = 1; // nao sei o que este parametro array da fun��o abaixo faz (na lina 111) set to 1 just not to give error
+
+  	foreach ($nodeids as $nid) {
+  		//dsm($nid);
+    $operations[] = array('refresher_op_2', array($nid, t('(Operation @operation)', array('@operation' => $i))));
+  	}
+
+
+  //}
+  $batch = array(
+    'operations' => $operations,
+    'finished' => 'refresher_finished',
+  );
+  return $batch;
+}
+
+
+function refresher_batch_3() {
+  $termids = metric_query_load('taxonomy_term_vocab_name');
+
+  $num_operations = count($nodeids);
+  drupal_set_message(t('Creating an array of @num operations', array('@num' => $num_operations)));
+
+  $operations = array();
+  // Set up an operations array with all the nids elements, each doing function refresher_op_1.
+  // Each operation in the operations array means at least one new HTTP request, running Drupal from scratch to accomplish the operation. If the operation
+  // returns with $context['finished'] != TRUE, then it will be called again. In this example, $context['finished'] is always TRUE.
+
+  $i = 1; // nao sei o que este parametro array da fun��o abaixo faz (na lina 111) set to 1 just not to give error
+
+  foreach ($nodeids as $nid) {
+    //dsm($nid);
+    $operations[] = array('refresher_op_3', array($nid, t('(Operation @operation)', array('@operation' => $i))));
+  }
+
+
+  //}
+  $batch = array(
+      'operations' => $operations,
+      'finished' => 'refresher_finished',
+  );
+  return $batch;
+
+}
+
+/**
+ * Batch operation for batch 1: load a node.
+ * This is the function that is called on each operation in batch 1.
+ */
+function refresher_op_1($nid, $operation_details, &$context) {
+
+  	 $node = node_load($nid, NULL, TRUE);
+  	 $title = $node->title;
+  	 //dsm($title);
+
+
+  	 // TODO: ver se d� para passar argumento com fornecedor.
+  	 $cityname = str_replace(" ","+", $title);
+  	 $node->feeds['OAuth2HTTPSFetcher']['source'] = 'https://graph.facebook.com/search?q='. $title .'&type=event&fields=' . 'cover,description,location,name,owner,start_time,timezone,end_time,ticket_uri,venue&since=' . $_SERVER['REQUEST_TIME'];
+
+	   node_save($node);
+	   feeds_batch('import', 'fb', $node->nid, $context);
+
+  // Store some results for post-processing in the 'finished' callback.
+  // The contents of 'results' will be available as $results in the
+  // 'finished' function (in this example, refresher_finished()).
+  $context['results'][] = $node->nid . ' : ' . check_plain($node->title);
+
+  // Optional message displayed under the progressbar.
+  $context['message'] = t('Loading node "@title"', array('@title' => $node->title)) . ' ' . $operation_details;
+
+  _refresher_update_http_requests();
+}
+
+/*
+ * Last.fm Operations
+ *
+ */
+
+function refresher_op_2($nid, $operation_details, &$context) {
+
+		 $node = node_load($nid, NULL, TRUE);
+  	 $title = $node->title;
+  	 //dsm($title);
+	// feeds_batch('import', 'lastfm', $node->nid, $context);
+		 node_save($node);
+
+  // Store some results for post-processing in the 'finished' callback.
+  // The contents of 'results' will be available as $results in the
+  // 'finished' function (in this example, refresher_finished()).
+  $context['results'][] = $node->nid . ' : ' . check_plain($node->title);
+
+  // Optional message displayed under the progressbar.
+  $context['message'] = t('Loading node "@title"', array('@title' => $node->title)) . ' ' . $operation_details;
+
+  _refresher_update_http_requests();
+
+}
+
+function refresher_op_3($fb_object_id, $operation_details, &$context){
+
+    // create metric nodes..
+
+
+   // metric_query_load('last_fm_artists');
+
+
+ 	$node = new stdClass(); // Create a new node object
+	$node->type = $provider; // Or any other content type you want
+	$node->title = $subject;
+
+	$node->language = LANGUAGE_NONE; // Or any language code if Locale module is enabled. More on this below *
+	$node->uid = 1; // Or any id you wish
+	$cityname = str_replace(" ","+", $title);
+  	$node->feeds['OAuth2HTTPSFetcher']['source'] = 'https://graph.facebook.com/search?q='. $title .'/{object-id}/insights/{metric-name}';
+
+	node_save($node);
+	feeds_batch('import', 'fb', $node->nid, $context);
+
+  // Store some results for post-processing in the 'finished' callback.
+  // The contents of 'results' will be available as $results in the
+  // 'finished' function (in this example, refresher_finished()).
+  $context['results'][] = $node->nid . ' : ' . check_plain($node->title);
+
+  // Optional message displayed under the progressbar.
+  $context['message'] = t('Loading node "@title"', array('@title' => $node->title)) . ' ' . $operation_details;
+
+  _refresher_update_http_requests();
+
+}
+
+/**
+ * Batch 'finished' callback used by both batch 1 and batch 2.
+ */
+function refresher_finished($success, $results, $operations) {
+  if ($success) {
+    // Here we could do something meaningful with the results.
+    // We just display the number of nodes we processed...
+    drupal_set_message(t('@count results processed in @requests HTTP requests.', array('@count' => count($results), '@requests' => _refresher_get_http_requests())));
+    drupal_set_message(t('The final result was "%final"', array('%final' => end($results))));
+    dpr($results);
+  }
+  else {
+    // An error occurred.
+    // $operations contains the operations that remained unprocessed.
+    $error_operation = reset($operations);
+    drupal_set_message(t('An error occurred while processing @operation with arguments : @args', array('@operation' => $error_operation[0], '@args' => print_r($error_operation[0], TRUE))));
+  }
+}
+
+/**
+ * Utility function - simply queries and loads the lowest nid.
+ * @return A nid or NULL if there are no nodes.
+ */
+function refresher_get_nids($provider) {
+  $query = new EntityFieldQuery();
+  //dsm("fucking providor");
+  //dsm("$provider");
+
+	$query->entityCondition('entity_type', 'node')
+	  ->entityCondition('bundle', 'facebook_feed') // could be facebook_feed
+	  ->propertyCondition('status', 1);
+
+	$result = $query->execute();
+
+	if (!empty($result['node'])) {
+	  $nids = array_keys($result['node']);
+
+	}
+  return $nids;
+}
+/**
+ * @} End of "defgroup batch_definitions".
+ */
+
+/**
+ * Utility function to count the HTTP requests in a session variable.
+ */
+function _refresher_update_http_requests() {
+  $_SESSION['http_request_count']++;
+}
+
+function _refresher_get_http_requests() {
+  return !empty($_SESSION['http_request_count']) ? $_SESSION['http_request_count'] : 0;
+}
+/**
+ * @} End of "defgroup refresher".
+ */
+
+
+function refresher_cron() {
+		drupal_set_message(t('Running refresher programmaticall batch import - needs testing'), TRUE);
+	  refresher_batch_1();
+
+}
