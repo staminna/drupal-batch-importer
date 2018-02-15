@@ -118,19 +118,13 @@ function refresher_batch_1() {
   drupal_set_message(t('Creating an array of @num operations', array('@num' => $num_operations)));
 
   $operations = array();
-  // Set up an operations array with all the nids elements, each doing function refresher_op_1.
-  // Each operation in the operations array means at least one new HTTP request, running Drupal from scratch to accomplish the operation. If the operation
-  // returns with $context['finished'] != TRUE, then it will be called again. In this example, $context['finished'] is always TRUE.
 
-  $i = 1; // nao sei o que este parametro array da fun��o abaixo faz (na lina 111) set to 1 just not to give error
+  $i = 1;
 
   	foreach ($nodeids as $nid) {
-  		//dsm($nid);
-    $operations[] = array('refresher_op_1', array($nid, t('(Operation @operation)', array('@operation' => $i))));
+	    $operations[] = array('refresher_op_1', array($nid, t('(Operation @operation)', array('@operation' => $i))));
   	}
 
-
-  //}
   $batch = array(
     'operations' => $operations,
     'finished' => 'refresher_finished',
@@ -146,19 +140,14 @@ function refresher_batch_2() {
   drupal_set_message(t('Creating an array of @num operations', array('@num' => $num_operations)));
 
   $operations = array();
-  // Set up an operations array with all the nids elements, each doing function refresher_op_1.
-  // Each operation in the operations array means at least one new HTTP request, running Drupal from scratch to accomplish the operation. If the operation
-  // returns with $context['finished'] != TRUE, then it will be called again. In this example, $context['finished'] is always TRUE.
 
-  $i = 1; // nao sei o que este parametro array da fun��o abaixo faz (na lina 111) set to 1 just not to give error
+
+  $i = 1; 
 
   	foreach ($nodeids as $nid) {
-  		//dsm($nid);
-    $operations[] = array('refresher_op_2', array($nid, t('(Operation @operation)', array('@operation' => $i))));
+	    $operations[] = array('refresher_op_2', array($nid, t('(Operation @operation)', array('@operation' => $i))));
   	}
 
-
-  //}
   $batch = array(
     'operations' => $operations,
     'finished' => 'refresher_finished',
@@ -174,19 +163,13 @@ function refresher_batch_3() {
   drupal_set_message(t('Creating an array of @num operations', array('@num' => $num_operations)));
 
   $operations = array();
-  // Set up an operations array with all the nids elements, each doing function refresher_op_1.
-  // Each operation in the operations array means at least one new HTTP request, running Drupal from scratch to accomplish the operation. If the operation
-  // returns with $context['finished'] != TRUE, then it will be called again. In this example, $context['finished'] is always TRUE.
 
-  $i = 1; // nao sei o que este parametro array da fun��o abaixo faz (na lina 111) set to 1 just not to give error
+  $i = 1; 
 
   foreach ($nodeids as $nid) {
-    //dsm($nid);
     $operations[] = array('refresher_op_3', array($nid, t('(Operation @operation)', array('@operation' => $i))));
   }
 
-
-  //}
   $batch = array(
       'operations' => $operations,
       'finished' => 'refresher_finished',
@@ -203,10 +186,7 @@ function refresher_op_1($nid, $operation_details, &$context) {
 
   	 $node = node_load($nid, NULL, TRUE);
   	 $title = $node->title;
-  	 //dsm($title);
 
-
-  	 // TODO: ver se d� para passar argumento com fornecedor.
   	 $cityname = str_replace(" ","+", $title);
   	 $node->feeds['OAuth2HTTPSFetcher']['source'] = 'https://graph.facebook.com/search?q='. $title .'&type=event&fields=' . 'cover,description,location,name,owner,start_time,timezone,end_time,ticket_uri,venue&since=' . $_SERVER['REQUEST_TIME'];
 
@@ -231,11 +211,10 @@ function refresher_op_1($nid, $operation_details, &$context) {
 
 function refresher_op_2($nid, $operation_details, &$context) {
 
-		 $node = node_load($nid, NULL, TRUE);
+	 $node = node_load($nid, NULL, TRUE);
   	 $title = $node->title;
-  	 //dsm($title);
 	// feeds_batch('import', 'lastfm', $node->nid, $context);
-		 node_save($node);
+	 node_save($node);
 
   // Store some results for post-processing in the 'finished' callback.
   // The contents of 'results' will be available as $results in the
@@ -250,9 +229,6 @@ function refresher_op_2($nid, $operation_details, &$context) {
 }
 
 function refresher_op_3($fb_object_id, $operation_details, &$context){
-
-    // create metric nodes..
-
 
    // metric_query_load('last_fm_artists');
 
@@ -306,8 +282,6 @@ function refresher_finished($success, $results, $operations) {
  */
 function refresher_get_nids($provider) {
   $query = new EntityFieldQuery();
-  //dsm("fucking providor");
-  //dsm("$provider");
 
 	$query->entityCondition('entity_type', 'node')
 	  ->entityCondition('bundle', 'facebook_feed') // could be facebook_feed
@@ -341,7 +315,7 @@ function _refresher_get_http_requests() {
 
 
 function refresher_cron() {
-		drupal_set_message(t('Running refresher programmaticall batch import - needs testing'), TRUE);
-	  refresher_batch_1();
+	drupal_set_message(t('Running refresher programmaticall batch import - needs testing'), TRUE);
+	refresher_batch_1();
 
 }
