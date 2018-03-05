@@ -1,5 +1,5 @@
 # drupal-batch-importer
-Batch import events from Facebook, Meetup and LastFM into Drupal7
+Batch import events from Facebook, Meetup and LastFM into Drupal7 entities
 
 1. Create directory with name refresher inside sites/all/modules.
 2. Copy files to directory.
